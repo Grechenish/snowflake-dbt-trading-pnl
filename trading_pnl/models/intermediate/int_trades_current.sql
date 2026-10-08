@@ -9,18 +9,23 @@ with latest_versions as (
 
 select
     trade_id,
-    version                                                  as current_version,
+    version                  as current_version,
     book,
     trader,
     instrument,
     side,
     quantity,
-    case when side = 'SELL' then -quantity else quantity end as signed_quantity,
+    -- no else: any other side (including null) stays null and fails the not_null test, rather
+    -- than being booked as a purchase
+    case
+        when side = 'BUY' then quantity
+        when side = 'SELL' then -quantity
+    end                      as signed_quantity,
     price,
     currency,
     trade_date,
     booked_at_utc,
     -- cash leaves the book on a BUY (negative) and comes back on a SELL (positive)
-    -signed_quantity * price                                 as cash_flow
+    -signed_quantity * price as cash_flow
 from latest_versions
 where status <> 'CANCEL'

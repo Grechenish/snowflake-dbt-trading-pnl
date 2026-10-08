@@ -117,6 +117,8 @@ models:
       - name: side
         description: "`BUY` or `SELL`."
         data_tests:
+          # accepted_values lets nulls through, so not_null is needed as well
+          - not_null
           - accepted_values:
               arguments:
                 values: [BUY, SELL]

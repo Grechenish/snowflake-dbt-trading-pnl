@@ -1,8 +1,15 @@
 version: 2
 
 # Data-quality tiers (docs/decisions.md, "Data quality tiers"):
-#   BLOCK  severity error (the default): the build stops and nothing downstream is published.
-#   WARN   severity warn: the run stays green, the warning shows in the run summary.
+#   BLOCK   severity error on a model that tables are built from: dbt build skips everything
+#           downstream, so those tables keep the last good data.
+#   ALERT   severity error with nothing left to stop: tests on fct_stock_history and
+#           fct_trading_pnl (already replaced when their tests run, and the department views read
+#           fct_trading_pnl live) and on the department views themselves. The run fails and the
+#           owner is emailed, but the new numbers are already visible. The checks that matter for
+#           PnL have a BLOCK twin upstream, on int_trading_pnl
+#           (tests/assert_position_cash_reconciles_to_trades.sql, the grain test).
+#   WARN    severity warn: the run stays green, the warning shows in the run summary.
 #   OBSERVE no test: measured in monitoring_market_data_daily and read by people.
 
 models:
@@ -108,7 +115,7 @@ models:
         description: USD -> EUR rate used for the day (latest published on or before it).
       - name: close_price_eur
         description: Close price in EUR, rounded to 4 decimals.
-        # BLOCK: null means no EUR rate on or before the day, i.e. the FX history starts too late
+        # ALERT: null means no EUR rate on or before the day, i.e. the FX history starts too late
         data_tests: [not_null]
       - name: usd_gbp_rate
         description: USD -> GBP rate used for the day (latest published on or before it).
@@ -262,7 +269,8 @@ models:
     description: >
       Observability for the market-data feed: per trading day, how many tickers arrived and how
       many have no close price (and are therefore skipped downstream). Read by people for trends;
-      the two tests below act on the newest day only.
+      the test below warns on the newest day only. The blocking check for a broken feed runs
+      upstream, on int_stock_prices_daily (tests/assert_latest_market_day_has_closes.sql).
     columns:
       - name: trade_date
         description: "{{ doc('col_price_trade_date') }}"
@@ -282,13 +290,6 @@ models:
                 expression: "<= 0.01"
               config:
                 severity: warn
-                where: "is_latest_day"
-          # BLOCK: when a fifth of the newest day has no close, the feed is broken (e.g. the close
-          # variable was renamed), and PnL would be valued on stale carried-forward prices
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "<= 0.2"
-              config:
                 where: "is_latest_day"
       - name: tickers_received_change
         description: Change in tickers_received against the previous trading day.

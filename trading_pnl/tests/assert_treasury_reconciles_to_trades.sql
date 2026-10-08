@@ -1,4 +1,4 @@
--- BLOCK. Reconciliation: the cash Treasury reports must equal the cash of the trades themselves.
+-- ALERT. Reconciliation: the cash Treasury reports must equal the cash of the trades themselves.
 -- The trade side is summed straight from int_trades_current, independently of the position
 -- calendar, PnL and the Treasury mart. A difference means a trade was dropped or double counted
 -- on the way (e.g. a lost calendar day or a duplicated join). Trades newer than the market data

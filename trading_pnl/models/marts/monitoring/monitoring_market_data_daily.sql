@@ -2,8 +2,9 @@
 
 -- OBSERVE. Completeness of the market data per trading day: how many tickers arrived, and how
 -- many of them have no close price (so they are skipped by everything downstream). Nobody is
--- paged by this view; people read it to see trends, and two tests on the newest day turn a bad
--- day into a warning or a failed build (see _marts.yml).
+-- paged by this view; people read it to see trends, and a test on the newest day turns a bad day
+-- into a warning (see _marts.yml). The blocking check for a broken feed reads
+-- int_stock_prices_daily directly (tests/assert_latest_market_day_has_closes.sql).
 with daily as (
     select
         trade_date,

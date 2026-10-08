@@ -25,6 +25,7 @@ jobs:
       && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: ci   # same CI key as ci.yml; no production key
     env:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_DBT_CI_PRIVATE_KEY }}

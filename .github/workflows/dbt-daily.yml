@@ -33,6 +33,9 @@ jobs:
   dbt-build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The production keys are secrets of the `production` environment, which only accepts runs
+    # from main: a manual run on another branch is refused before any step can read them.
+    environment: production
     outputs:
       docs_uploaded: ${{ steps.upload_docs.outcome }}
     env:

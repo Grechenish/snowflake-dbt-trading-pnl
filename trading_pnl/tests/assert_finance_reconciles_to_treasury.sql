@@ -1,4 +1,4 @@
--- BLOCK. Reconciliation between two published reports: on every day, the cumulative cash Finance
+-- ALERT. Reconciliation between two published reports: on every day, the cumulative cash Finance
 -- reports per book, summed per currency, must equal Treasury's cash balance for that currency.
 -- Treasury sums daily cash flows over time; Finance sums each position's running cash. They only
 -- agree if every position has a row on every trading day, so this catches gaps in the position

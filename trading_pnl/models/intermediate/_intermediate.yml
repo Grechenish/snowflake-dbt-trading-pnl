@@ -147,7 +147,13 @@ models:
     description: >
       Daily positions marked to market in the book currency, with cumulative cash and PnL, at full
       precision. FX uses the latest rate on or before each day (ASOF JOIN), because rates aren't
-      published on every trading day.
+      published on every trading day. Its tests are the last ones that can stop a bad build: they
+      run before fct_trading_pnl is replaced, and the department views read fct_trading_pnl live.
+    data_tests:
+      # BLOCK: a duplicated position-day would double its market value and cash in every report
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [book, trader, instrument, currency, position_date]
     columns:
       - name: book
         description: "{{ doc('col_book') }}"

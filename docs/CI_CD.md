@@ -69,7 +69,9 @@ privilege problem. Those only show up when Snowflake runs the SQL.
 3. **Measure restatements** (observe only, never fails the run): logs how far back the market data
    changed since the last run. This must run before the build overwrites the evidence.
 4. **`dbt build --target prod`**: models and data tests in dependency order. A failing blocking
-   test skips everything downstream of it. Unit tests check code, so they run in CI, not here.
+   test skips everything downstream of it. dbt has already replaced the tested model by then, and
+   a test on a model with nothing downstream skips nothing, which is why the PnL checks run on
+   `int_trading_pnl`, before `fct_trading_pnl` and the department views. Unit tests check code, so they run in CI, not here.
 5. **Job summary, manifest and run results** are uploaded; the manifest becomes CI's comparison
    point.
 6. **dbt docs** are generated and deployed to GitHub Pages.
@@ -80,14 +82,18 @@ A failed run turns the workflow red, and GitHub emails the repository owner.
 ## Setting it up
 
 1. Run `snowflake/01`–`05` (see [snowflake/README.md](../snowflake/README.md)).
-2. Add repository secrets (**Settings → Secrets and variables → Actions**):
+2. Create two environments (**Settings → Environments → New environment**) and add the keys as
+   environment secrets, not repository secrets:
 
-   | Secret | Value |
-   |---|---|
-   | `SNOWFLAKE_ACCOUNT` | account identifier, e.g. `myorg-myaccount` |
-   | `SNOWFLAKE_LOADER_PRIVATE_KEY` | full contents of `svc_loader.p8` |
-   | `SNOWFLAKE_DBT_PROD_PRIVATE_KEY` | full contents of `svc_dbt_prod.p8` |
-   | `SNOWFLAKE_DBT_CI_PRIVATE_KEY` | full contents of `svc_dbt_ci.p8` |
+   | Environment | Deployment branches | Secrets |
+   |---|---|---|
+   | `production` | Selected branches: `main` only | `SNOWFLAKE_LOADER_PRIVATE_KEY` (contents of `svc_loader.p8`), `SNOWFLAKE_DBT_PROD_PRIVATE_KEY` (contents of `svc_dbt_prod.p8`) |
+   | `ci` | No restriction (pull requests run from their own branches) | `SNOWFLAKE_DBT_CI_PRIVATE_KEY` (contents of `svc_dbt_ci.p8`) |
+
+   `SNOWFLAKE_ACCOUNT` (the account identifier, e.g. `myorg-myaccount`) isn't a credential and
+   stays a repository secret. If the keys were added as repository secrets before, delete them
+   there: a repository secret is readable by a run on any branch, which is what the environments
+   are for. `dbt daily build` runs in `production`; the CI build and the cleanup run in `ci`.
 
 3. **Settings → Pages → Source: GitHub Actions** for the docs site.
 4. Run **dbt daily build** once by hand (**Actions → dbt daily build → Run workflow**). This

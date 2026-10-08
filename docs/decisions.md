@@ -197,7 +197,9 @@ jobs alike.
 **Why.** A leaked CI key can't write production or load files; a key can be rotated without
 touching the other jobs; login and query history say which process did what. `TYPE = SERVICE`
 users can't log in with a password at all.
-**Trade-offs.** Three keys and three secrets to manage.
+**Trade-offs.** Three keys and three secrets to manage. The keys are GitHub environment secrets:
+`production` only accepts runs from `main`, so a workflow started on another branch can't read the
+production or loader key, and CI's `ci` environment holds only the CI key.
 
 ## 17. Key-pair authentication
 
@@ -239,7 +241,12 @@ test). Rows without a close are kept and counted instead of filtered before the 
 **Why.** A failure should stop publishing only when the output would be wrong (a trade lost or
 double counted, cash not reconciling, a broken feed). A stale price on one instrument or a late
 trade is worth knowing but not worth withholding every report.
-**Trade-offs.** Warnings are only useful if someone reads the run summary.
+**Trade-offs.** Warnings are only useful if someone reads the run summary. A blocking test has
+to sit on a model that something is built from: `dbt build` replaces a model before testing it
+and only skips what comes after. The reconciliations on the department marts were first written
+as blocking tests, but they sit at the end of the graph and the marts are views, so they could
+only fail the run after publishing. The blocking versions now run on `int_trading_pnl` and
+`int_stock_prices_daily`; the originals stay as alerts.
 
 ## 21. Not over-engineering
 

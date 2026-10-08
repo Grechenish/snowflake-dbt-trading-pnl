@@ -11,7 +11,8 @@ went red tells you where.
 |---|---|---|
 | Load trade files | a file `COPY` can't read (it aborts and loads nothing from that run), missing or rotated key | Check `RAW.TRADES.LOAD_RUNS` (below). A failed file stays on the stage and would abort every later run, so first remove it (below), then add the fixed file **under a new name** and rerun. |
 | Check source freshness | the Marketplace feed stopped, or no successful load in ~3 days | Check the listing in Snowsight; nothing is rebuilt until the source recovers, so yesterday's marts stay as they were. |
-| dbt build: a blocking test | real bad data or a bug | Read the failing test's SQL and description; it says what it protects. Downstream models were skipped. |
+| dbt build: a blocking test | real bad data or a bug | Read the failing test's SQL and description; it says what it protects. Downstream models were skipped and keep the last good data. |
+| dbt build: an alert test (on `fct_*` or a department mart) | the same, caught on the published data | The new numbers are already visible, because the views read `fct_trading_pnl` live. Check whether a blocking test upstream should have caught it; if the data is wrong, roll back (below). |
 | dbt build: a model | SQL error, privilege error, statement timeout | The error is in the log; a timeout means a runaway query (10-minute limit). |
 
 ```sql
@@ -109,5 +110,6 @@ consumers saw nothing.
 
 1. Generate a new key pair (see `snowflake/05_credentials.sql`).
 2. `alter user <user> set rsa_public_key_2 = '<new public key>';`
-3. Replace the GitHub secret with the new private key and run the workflow.
+3. Replace the environment secret (`production` or `ci`, see [CI_CD.md](CI_CD.md)) with the new
+   private key and run the workflow.
 4. `alter user <user> unset rsa_public_key;`

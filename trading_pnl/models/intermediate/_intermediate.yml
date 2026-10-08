@@ -69,7 +69,10 @@ models:
       - name: quantity
         description: Number of shares traded. Always positive; the direction comes from `side`.
       - name: signed_quantity
-        description: "`+quantity` for a BUY and `-quantity` for a SELL."
+        description: >
+          `+quantity` for a BUY and `-quantity` for a SELL. Null for any other side, so a bad
+          direction fails the build instead of being booked as a purchase.
+        data_tests: [not_null]
       - name: price
         description: Execution price per share in the book currency.
       - name: currency

@@ -167,8 +167,11 @@ rollbacks) is covered in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 - **Verified on Snowflake**: the first production run and one pull-request build (all models,
   data tests and unit tests in a CI schema) on 2 Oct 2026, the CI schema cleanup the same day,
   and four scheduled production runs on top of existing data, 3 to 6 Oct (every model and data
-  test passed). Not run there yet: the CI path that defers to production, and the GitHub
-  environments. The performance numbers come from the earlier version.
+  test passed). The CI path that defers to production first ran on 8 Oct, on pull request #3:
+  58 changed and downstream nodes built and passed, with unchanged parents read from production.
+  Not run yet: the clone step with a changed incremental model (that pull request had none), and
+  the environment secrets themselves (the jobs still found the keys as repository secrets). The
+  performance numbers come from the earlier version.
 - Trades are synthetic and few; prices in them are illustrative.
 - The free market data lags about 90 days, so recent trades wait for prices
   (`assert_trades_within_market_data` lists them).

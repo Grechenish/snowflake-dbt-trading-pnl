@@ -65,6 +65,8 @@ jobs:
       && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The CI key lives in the `ci` environment, so this job never sees the production keys.
+    environment: ci
     permissions:
       contents: read
       actions: read         # to download the production manifest from the daily workflow
@@ -83,7 +85,7 @@ jobs:
           [ -n "$SNOWFLAKE_ACCOUNT" ] || missing="$missing SNOWFLAKE_ACCOUNT"
           [ -n "$SNOWFLAKE_PRIVATE_KEY" ] || missing="$missing SNOWFLAKE_DBT_CI_PRIVATE_KEY"
           if [ -n "$missing" ]; then
-            echo "::error::Repository secrets not set:$missing (see docs/CI_CD.md, Setting it up)"
+            echo "::error::Secrets not set:$missing (see docs/CI_CD.md, Setting it up)"
             exit 1
           fi
 

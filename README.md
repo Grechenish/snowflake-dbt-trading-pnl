@@ -89,13 +89,21 @@ Tests are tiered by what should happen when they fail:
 
 | Tier | Mechanism | Examples |
 |---|---|---|
-| **Block** | test severity `error`: the build stops, nothing downstream is published | conflicting trade replays, broken version sequences, trades on non-trading days, Treasury cash not reconciling to the trades, Finance not reconciling to Treasury, >20% of the newest market day missing closes |
+| **Block** | test severity `error` on a model that tables are built from: everything downstream is skipped and keeps the last good data | conflicting trade replays, broken version sequences, a trade without a side, trades on non-trading days, a position's cash or trading days not reconciling to its trades, a duplicated position-day, >20% of the newest market day missing closes |
+| **Alert** | test severity `error` with nothing left to stop: the run fails and the owner is emailed, but the new numbers are already visible | Treasury cash not reconciling to the trades, Finance not reconciling to Treasury, Risk shares not adding up to 1, tests on `fct_trading_pnl` and `fct_stock_history` |
 | **Warn** | severity `warn`: the run stays green and the warning is in the run summary | stale prices (`price_age_days` > 5), trades newer than the market data, overnight moves above 40% (a possible unadjusted split), restatements older than the incremental window, >1% missing closes |
 | **Observe** | no test; measured for people to read | `monitoring_market_data_daily`, the restatement-depth analysis in the daily log |
 
 Rows the market data delivers without a close price are kept and counted, not filtered out
 before a test can see them. Unit tests cover the incremental branch, amendments and
-cancellations, replay deduplication, the forward fill and the PnL arithmetic.
+cancellations, a trade without a side, replay deduplication, the forward fill and the PnL
+arithmetic.
+
+`dbt build` replaces a model before running its tests, and a failing test skips only what is
+built from that model. Tests on the last models in the graph therefore can't stop anything, and
+the department marts are views that read `fct_trading_pnl` live. So the checks that protect the
+reports run one step earlier, on `int_trading_pnl` and `int_stock_prices_daily`; the
+reconciliations on the published reports stay as alerts that repeat them after the fact.
 
 ## Performance
 
@@ -123,10 +131,14 @@ Service users are `TYPE = SERVICE` with RSA key-pair authentication; people log 
 themselves. Every warehouse is XSMALL with 60 s auto-suspend and a statement timeout, under a
 monthly resource monitor.
 
+On GitHub, the keys are secrets of two environments rather than of the repository: `production`
+(loader and production keys, deployments from `main` only) and `ci` (the CI key). A workflow run on
+any other branch can't read the production keys.
+
 ## How to run
 
 **One-time setup** (Snowflake account admin): install the *Snowflake Public Data (Free)* listing,
-run `snowflake/01`–`05` in order, then add the GitHub secrets listed in
+run `snowflake/01`–`05` in order, then create the GitHub environments and secrets listed in
 [docs/CI_CD.md](docs/CI_CD.md).
 
 **Local development**, in a virtualenv with your own Snowflake user (holding the `developer` role):
@@ -152,11 +164,11 @@ rollbacks) is covered in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ## Limitations
 
-- **Verified on Snowflake on 2 Oct 2026** by one production run (loader, freshness, every model
-  and data test) and one pull-request build (all models, data tests and unit tests in a CI
-  schema). Not run there yet: a production run on top of existing data, the CI path that defers
-  to production (it needs a production manifest from `main`), and the CI schema cleanup. The
-  performance numbers come from the earlier version.
+- **Verified on Snowflake**: the first production run and one pull-request build (all models,
+  data tests and unit tests in a CI schema) on 2 Oct 2026, the CI schema cleanup the same day,
+  and four scheduled production runs on top of existing data, 3 to 6 Oct (every model and data
+  test passed). Not run there yet: the CI path that defers to production, and the GitHub
+  environments. The performance numbers come from the earlier version.
 - Trades are synthetic and few; prices in them are illustrative.
 - The free market data lags about 90 days, so recent trades wait for prices
   (`assert_trades_within_market_data` lists them).
@@ -167,7 +179,9 @@ rollbacks) is covered in [docs/RUNBOOK.md](docs/RUNBOOK.md).
   order-management system.
 - One Snowflake account for every environment; isolation is by database, schema and role.
 - Department marts are views, so they show a new `fct_trading_pnl` the moment it is rebuilt, even
-  if a test on it then fails.
+  if a test on it then fails. The blocking checks run on `int_trading_pnl` for that reason, but a
+  problem only visible in the department marts themselves (e.g. Risk shares not adding up) is
+  an alert, not a block.
 
 ## Origin
 
